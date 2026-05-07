@@ -37,18 +37,6 @@ Modern organizations face challenges such as scattered customer data, poor commu
 - Sales Workflow and Pipeline Management  
 - Centralized Data Management (Single Source of Truth)  
 
-
-## Real Business Problems Solved
-
-# 1. Scattered Customer Data
-- Problem: Customer data is stored across multiple tools  
-- Solution: Salesforce centralizes all data into one platform  
-
-# 2. Poor Team Communication
-- Problem: Teams do not share information effectively  
-- Solution: Shared access to customer data improves collaboration  
-
-
 # Learnings
 - Understood the importance of CRM in modern businesses  
 - Learned how Salesforce connects data, teams, and processes  
