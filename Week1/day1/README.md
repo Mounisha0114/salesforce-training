@@ -42,5 +42,28 @@ Modern organizations face challenges such as scattered customer data, poor commu
 - Learned how Salesforce connects data, teams, and processes  
 - Gained clarity on objects, records, and relationships  
 - Understood real-world sales workflows  
-- Recognized the impact of automation on productivity  
+- Recognized the impact of automation on productivity
+
+## Mandatory Submission
+
+### 1. What problem does Salesforce solve?
+Salesforce solves the problem of scattered customer data, poor communication between teams, and inefficient manual processes by providing a centralized platform to manage customer information and business workflows.
+
+### 2. What is CRM?
+CRM (Customer Relationship Management) is a system used to manage customer data, track interactions, and improve relationships with customers to increase business growth.
+
+### 3. What is an Object in Salesforce? Give one example.
+An Object in Salesforce is like a table in a database used to store data.  
+Example: Lead object, which stores information about potential customers.
+
+### 4. Difference between Salesforce Admin and Developer
+
+- **Admin:**  
+  Manages the Salesforce system, configures features, creates reports, and handles users without coding.
+
+- **Developer:**  
+  Builds custom functionality using programming (Apex, Lightning), and develops applications on Salesforce.
+
+### 5. Suggest one real-world application that can be built using Salesforce
+A Student Management System can be built using Salesforce to manage student data, courses, attendance, and performance in one centralized platform.
 
