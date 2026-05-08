@@ -33,4 +33,13 @@ Lead → Contact → Opportunity → Customer
 
 
 ## Screenshots
+<img width="933" height="412" alt="image" src="https://github.com/user-attachments/assets/09fbf4dc-4f24-49a1-b003-952cfba69055" />
+
+<img width="944" height="470" alt="image" src="https://github.com/user-attachments/assets/5316bd47-8279-40cf-b0d2-acdbb4a45f87" />
+
+<img width="955" height="473" alt="image" src="https://github.com/user-attachments/assets/34b5c36a-0171-49ab-929b-70daf55c2768" />
+
+<img width="946" height="472" alt="image" src="https://github.com/user-attachments/assets/876b8676-9d52-40bc-af35-f2396d8a1ff9" />
+
+
 
