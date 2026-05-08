@@ -22,13 +22,6 @@
 
 ---
 
-### Salesforce Interface Basics
-- Home Page → shows tasks, events, and updates  
-- Navigation Bar → used to access modules  
-- App Launcher → used to open apps and features  
-
----
-
 ### Core Salesforce Objects
 - Lead → potential customer  
 - Account → company/organization  
@@ -37,34 +30,12 @@
 
 ---
 
-### Basic Workflow
-Lead → Convert → Account + Contact → Opportunity → Deal  
+### Business Workflow
+Lead → Contact → Opportunity → Customer 
 
 ---
 
-### What are Objects?
-- Objects are like tables in a database  
-- Used to store data in Salesforce  
-
----
-
-### What are Records?
-- A record is a single entry inside an object  
-- Similar to a row in a table  
-
----
-
-### Salesforce Data Structure
-- Objects contain records  
-- Records contain fields  
-- Objects are connected using relationships  
-
----
-
-### How Salesforce Applications are Built
-- Using Objects (data storage)  
-- Fields (data inside objects)  
-- Relationships (connections between objects)  
-- Logic and automation  
-
----
+### Salesforce Playground
+- A practice environment provided by Salesforce  
+- Used to learn and perform tasks without affecting real data  
+- Helps in completing Trailhead challenges 
