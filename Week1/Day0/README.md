@@ -66,10 +66,3 @@ Example: Lead object, which stores information about potential customers.
 
 ### 5. Suggest one real-world application that can be built using Salesforce
 A Student Management System can be built using Salesforce to manage student data, courses, attendance, and performance in one centralized platform.
-
-## Screenshots
-
-<img width="958" height="473" alt="image" src="https://github.com/user-attachments/assets/1822eb0f-eb31-4a0b-aaa8-7d1b433cb83c" />
-
-<img width="947" height="475" alt="image" src="https://github.com/user-attachments/assets/d31d7c18-2a70-4a15-8830-57048f720c60" />
-
