@@ -1,4 +1,4 @@
-## DAY-1 Notes 
+## DAY-2 Notes 
 
 ### Salesforce Values
 - Salesforce focuses on core values:
