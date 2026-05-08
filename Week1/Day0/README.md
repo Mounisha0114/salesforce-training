@@ -1,4 +1,4 @@
-# DAY-1 : Salesforce CRM Foundations 
+# DAY-0 : Salesforce CRM Foundations 
 
 ## Problem Summary
 Modern organizations face challenges such as scattered customer data, poor communication between teams, and inefficient manual processes. DAY-1 focuses on understanding how Salesforce, a CRM platform, solves these problems by providing a centralized system to manage customer data, streamline workflows, and improve overall efficiency.
