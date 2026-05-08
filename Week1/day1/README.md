@@ -12,11 +12,11 @@ CRM (Customer Relationship Management) is a system used to manage customer data,
 
 ## Core Concepts
 # Account
-Represents a company or organization.
+-Represents a company or organization.
 # Contact
-Represents a person associated with an account.
+-Represents a person associated with an account.
 # Opportunity
-Represents a potential sales deal.
+-Represents a potential sales deal.
 
 ## Business Workflow
 Lead → Contact → Opportunity → Customer
