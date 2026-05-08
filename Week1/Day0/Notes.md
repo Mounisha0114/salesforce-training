@@ -1,4 +1,4 @@
-## DAY-1 Notes 
+## DAY-0 Notes 
 
 ### What is CRM?
 - CRM (Customer Relationship Management) is a system used to manage customer data and interactions  
