@@ -1,4 +1,4 @@
-# Day 2: CRM Basics
+# Day 1: CRM Basics
 
 ## What is CRM?
 CRM (Customer Relationship Management) is a system used to manage customer data, interactions, and business relationships. It helps companies improve customer satisfaction and increase sales.
