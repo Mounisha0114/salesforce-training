@@ -1,7 +1,4 @@
-# Salesforce Day 3
 ## Data Modeling and Business Logic
-
----
 
 # 1. Difference Between App, Object, Record, and Field
 
