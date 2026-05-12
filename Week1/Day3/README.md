@@ -1,4 +1,4 @@
-# Salesforce Summer Program – Day 3
+# Salesforce Day 3
 ## Data Modeling and Business Logic
 
 ---
