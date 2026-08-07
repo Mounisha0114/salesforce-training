@@ -1,159 +1,201 @@
-# Salesforce Placement Management System – Bulk Processing & Bulk-Safe Apex
+# Day 7 – Bulkifying Eligibility Validation using Apex Collections
 
-## Overview
+## Project Overview
 
-This project demonstrates the implementation of **Bulk Processing** and **Bulk-Safe Apex Triggers** in Salesforce for a Placement Management System. It follows Salesforce best practices by designing Apex code that efficiently processes multiple records while complying with Governor Limits.
-
-The project focuses on validating student eligibility for job applications using bulkified Apex, Trigger Handlers, and collection-based processing.
+This project implements bulk-safe eligibility validation for the Placement Management System in Salesforce using Apex. The solution validates student applications against job eligibility criteria while following Salesforce governor limits and best practices.
 
 ---
 
-## Objectives
+## Objective
 
-- Understand Salesforce Governor Limits.
-- Design scalable Apex code.
-- Implement bulk-safe Trigger architecture.
-- Process multiple records efficiently.
-- Eliminate SOQL and DML operations inside loops.
-- Use Lists, Sets, and Maps effectively.
-- Validate student eligibility before creating applications.
+- Validate Student and Job references.
+- Validate Student CGPA against Job minimum GPA.
+- Validate Student active backlogs against Job allowed backlogs.
+- Validate Student department against Job eligible department.
+- Use Apex Collections (Set and Map).
+- Avoid SOQL queries inside loops.
 
 ---
 
 ## Technologies Used
 
-- Salesforce Platform
+- Salesforce
 - Apex
-- Apex Triggers
 - SOQL
-- Lists
-- Sets
-- Maps
-- Developer Edition
+- Developer Console
 
 ---
 
 ## Objects Used
 
 ### Student__c
-
-Fields:
-- Student Name
-- CGPA
-- Department
-- Email
-- DOB
+- CGPA__c
+- Active_Backlogs__c
+- Department__c
 
 ### Job__c
-
-Fields:
-- Job Title
-- Company
-- Minimum CGPA
-- Location
-- Salary
-- Closing Date
+- Minimum_Gpa__c
+- Allowed_Backlogs_c__c
+- Eligible_Department__c
 
 ### Application__c
-
-Fields:
-- Student
-- Job
-- Application Date
-- Status
-- Remarks
+- Student__c (Lookup)
+- Job__c (Lookup)
 
 ---
 
-## Project Architecture
+## Architecture
 
+```
 Application Trigger
-
-↓
-
-ApplicationEligibilityService
-
-↓
-
-Collect Student IDs
-
-↓
-
-Collect Job IDs
-
-↓
-
-Single Student Query
-
-↓
-
-Single Job Query
-
-↓
-
-Store Results in Maps
-
-↓
-
-Validate Applications
-
-↓
-
-Save or Display Error
+        │
+        ▼
+ApplicationTriggerHandler
+        │
+        ▼
+ApplicationService
+        │
+        ├── Collect Student IDs
+        ├── Collect Job IDs
+        ├── Query Students
+        ├── Query Jobs
+        ├── Store Records in Maps
+        └── Validate Applications
+```
 
 ---
 
-## Bulk Processing Pattern
+## Features Implemented
 
-1. Receive all Application records.
-2. Collect Student IDs.
-3. Collect Job IDs.
-4. Query Students once.
-5. Query Jobs once.
-6. Store records in Maps.
-7. Validate each Application.
-8. Prevent invalid Applications using addError().
-9. Perform no SOQL inside loops.
-10. Perform no DML inside loops.
+### Student Validation
+Ensures every application has a Student record.
 
----
+### Job Validation
+Ensures every application has a Job record.
 
-## Governor Limits Considered
+### CGPA Validation
+Prevents applications when the student's CGPA is below the job's minimum GPA.
 
-This project follows Salesforce Governor Limits by:
+### Backlog Validation
+Prevents applications when the student's active backlogs exceed the job's allowed backlogs.
 
-- Using only one SOQL query for Students.
-- Using only one SOQL query for Jobs.
-- Avoiding SOQL inside loops.
-- Avoiding DML inside loops.
-- Processing records using collections.
-- Supporting bulk operations for up to 200 records.
+### Department Validation
+Allows only students from eligible departments to apply for a job.
 
 ---
 
-## Collections Used
+## Bulkification
 
-### List
-
-Stores multiple Application records received from Trigger.new.
+This implementation follows Salesforce bulkification best practices.
 
 ### Set
 
-Stores unique Student IDs and Job IDs.
+Used to collect unique Student and Job IDs.
+
+```apex
+Set<Id> studentIds = new Set<Id>();
+Set<Id> jobIds = new Set<Id>();
+```
 
 ### Map
 
-Stores queried Student and Job records for fast lookup using record Ids.
+Used to store Student and Job records retrieved from SOQL.
+
+```apex
+Map<Id, Student__c> studentMap;
+Map<Id, Job__c> jobMap;
+```
 
 ---
 
-## Eligibility Validation Logic
+## SOQL Optimization
 
-Student is eligible if:
+- One SOQL query for Student records.
+- One SOQL query for Job records.
+- No SOQL queries inside loops.
+- Uses Maps to retrieve records efficiently.
 
-Student CGPA >= Job Minimum CGPA
+---
 
-If the student does not satisfy the eligibility criteria, the application is blocked using:
+## Validations Performed
 
-```apex
-app.addError('Student is not eligible because CGPA is below the required minimum CGPA.');
+- Student is required.
+- Job is required.
+- Student CGPA must meet the Job's minimum GPA.
+- Student backlogs must not exceed the Job's allowed backlogs.
+- Student department must match the Job's eligible department.
+
+---
+
+## Governor Limit Best Practices
+
+- Uses Sets to avoid duplicate IDs.
+- Uses Maps for efficient lookups.
+- No SOQL inside loops.
+- Bulk-safe implementation.
+- Scalable design for multiple records.
+
+---
+
+## Files Included
+
+- ApplicationTrigger.trigger
+- ApplicationTriggerHandler.cls
+- ApplicationService.cls
+- README.md
+
+---
+
+## Test Cases
+
+### Test Case 1
+**Scenario:** Student CGPA is greater than the minimum GPA.
+
+**Expected Result:** Application is created successfully.
+
+---
+
+### Test Case 2
+**Scenario:** Student CGPA is below the minimum GPA.
+
+**Expected Result:** Validation error is displayed.
+
+---
+
+### Test Case 3
+**Scenario:** Student has more active backlogs than allowed.
+
+**Expected Result:**  
+`Student has more backlogs than allowed.`
+
+---
+
+### Test Case 4
+**Scenario:** Student department is not eligible.
+
+**Expected Result:**  
+`Student department is not eligible for this job.`
+
+---
+
+### Test Case 5
+**Scenario:** Student or Job is not selected.
+
+**Expected Result:** Appropriate validation error is displayed.
+
+---
+
+## Learning Outcomes
+
+- Learned bulkification using Sets and Maps.
+- Implemented bulk-safe Apex code.
+- Avoided SOQL queries inside loops.
+- Used Trigger → Handler → Service architecture.
+- Implemented business validations in Apex.
+- Followed Salesforce governor limits and best practices.
+
+---
+
+## Conclusion
+
+This project demonstrates a bulk-safe approach to validating placement applications using Apex Collections. The solution uses Sets and Maps to optimize SOQL queries, validates student eligibility based on business rules, and follows Salesforce best practices for scalable and efficient Apex development.
