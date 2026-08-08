@@ -1,313 +1,367 @@
-# Engineering Sprint 8 – Designing Asynchronous Workflows That Remain Reliable
+# Placement Management System – Advanced Apex Automation
 
-## Objective
+## 📌 Project Overview
 
-The objective of this sprint is to understand and implement asynchronous processing in Salesforce by using Queueable Apex, Queueable Chaining, Batch Apex, and Scheduled Apex. The goal is to separate immediate business operations from background processing while building scalable, maintainable, and reliable applications.
+This project is a **Salesforce Placement Management System** developed using **Apex Triggers, Handler Classes, Service Classes, Queueable Apex, Batch Apex, and Scheduled Apex**.
 
----
-
-# Tasks Completed
-
-## Task 1 – Queueable Apex
-
-Created a Queueable Apex class named **OfferPostProcessingJob**.
-
-### Implemented
-
-- Accepted Offer Letter Id through the constructor.
-- Retrieved the Offer Letter record using SOQL.
-- Executed background processing.
-- Simulated External Synchronization.
-- Simulated Notification Processing.
-- Simulated Analytics Processing.
-
-### Verified Using
-
-- Developer Console Debug Logs
-- Setup → Apex Jobs
+The system automates important placement activities such as application validation, placement notifications, offer post-processing, external synchronization, and placement-category processing.
 
 ---
 
-## Task 2 – Queueable Chaining
+## 🏗️ Salesforce Objects
 
-Created two Queueable Apex classes:
+The project uses the following custom objects:
 
-- ExternalPlacementSyncJob
-- PlacementNotificationJob
+* `Student__c`
+* `Job__c`
+* `Application__c`
 
-### Implemented
-
-- Executed External Synchronization.
-- Started PlacementNotificationJob after successful completion.
-- Demonstrated Queueable Chaining.
-
-### Verified Using
-
-- Developer Console Debug Logs
-- Setup → Apex Jobs
+> **Note:** An `Offer_Letter__c` object was not created. Offer processing is handled through Apex asynchronous processing.
 
 ---
 
-## Task 3 – Batch Apex
+## ⚙️ Main Components
 
-Created Batch Apex class:
+### 1. Application Trigger
 
-**PlacementCategoryBatch**
+**Trigger:** `ApplicationTrigger`
 
-### Implemented
+The trigger handles:
 
-- start()
-- execute()
-- finish()
+* Before Insert
+* Before Update
 
-### Executed Using
+It delegates the actual business logic to the trigger handler instead of putting logic directly inside the trigger.
 
-- Execute Anonymous Window
+```apex
+trigger ApplicationTrigger on Application__c (before insert, before update, after update) {
 
-### Verified Using
+    if (Trigger.isBefore && Trigger.isInsert) {
+        ApplicationTriggerHandler.handleBeforeInsert(Trigger.new);
+    }
 
-- Setup → Apex Jobs
-- Developer Console Debug Logs
+    if (Trigger.isBefore && Trigger.isUpdate) {
+        ApplicationTriggerHandler.handleBeforeUpdate(
+            Trigger.new,
+            Trigger.oldMap
+        );
+    }
 
----
-
-## Task 4 – Scheduled Apex
-
-Created Scheduled Apex class:
-
-**ExpiredJobScheduler**
-
-### Implemented
-
-- Scheduled Batch Apex execution using a Cron Expression.
-- Automatically executed the Batch Apex job.
-
-### Verified Using
-
-- Setup → Scheduled Jobs
-- Setup → Apex Jobs
-
----
-
-# Execution Flow
-
-```
-Student Accepts Offer Letter
-          │
-          ▼
-Synchronous Processing
-          │
-          ▼
-Queueable Apex
-          │
-          ▼
-External Synchronization
-          │
-          ▼
-Queueable Chaining
-          │
-          ▼
-Notification Processing
-          │
-          ▼
-Analytics Processing
-          │
-          ▼
-Batch Apex
-          │
-          ▼
-Scheduled Apex
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        ApplicationTriggerHandler.handleAfterUpdate(
+            Trigger.new,
+            Trigger.oldMap
+        );
+    }
+}
 ```
 
 ---
 
-# Classes Created
+## 2. ApplicationTriggerHandler
 
-- OfferPostProcessingJob
-- ExternalPlacementSyncJob
-- PlacementNotificationJob
-- PlacementCategoryBatch
-- ExpiredJobScheduler
+**Class:** `ApplicationTriggerHandler`
 
----
+The handler separates trigger logic from business logic.
 
-# Result Verification
+### Methods
 
-The implemented classes were executed successfully using the Execute Anonymous Window.
+* `handleBeforeInsert()`
+* `handleBeforeUpdate()`
+* `handleAfterUpdate()`
 
-Execution was verified through:
-
-- Developer Console Debug Logs
-- Setup → Apex Jobs
-- Setup → Scheduled Jobs
+The handler calls the appropriate service classes and asynchronous jobs.
 
 ---
 
-# Architecture Review Answers
+## 3. ApplicationService
 
-### 1. Immediate Validation using Batch Apex
+**Class:** `ApplicationService`
 
-Not recommended because validation should occur immediately during the synchronous transaction.
+This service validates student applications.
 
-### 2. Processing 300,000 Records using Future Method
+### Validations
 
-Not suitable because Future Methods are not intended for processing very large datasets.
+#### Student Validation
 
-Batch Apex is the appropriate solution.
+Checks whether a Student is associated with the Application.
 
-### 3. Scheduled Apex directly processing a huge dataset
+#### Job Validation
 
-Not recommended.
+Checks whether a Job is associated with the Application.
 
-Scheduled Apex should start a Batch Apex job instead of processing all records directly.
+#### CGPA Validation
 
-### 4. Queueable Job performing multiple responsibilities
+The student's CGPA is compared with the minimum CGPA required for the Job.
 
-This violates the Single Responsibility Principle.
-
-Each Queueable class should perform only one responsibility.
-
-### 5. Moving inefficient synchronous code into Queueable Apex
-
-Moving inefficient code into Queueable Apex does not automatically improve performance.
-
-The underlying business logic should also be optimized.
-
----
-
-# Architecture Challenge Solution
-
-```
-User
- │
- ▼
-Synchronous Transaction
- │
- ▼
-Queueable Apex
- │
- ▼
-Queueable Chaining
- │
- ▼
-Scheduled Apex
- │
- ▼
-Batch Apex
- │
- ▼
-Business Logic
+```text
+Student CGPA < Job Minimum GPA
+        ↓
+Application rejected
 ```
 
-This architecture separates immediate user operations from background processing, making the application scalable, maintainable, and efficient.
+#### Backlog Validation
+
+The student's active backlogs are compared with the number of backlogs allowed for the Job.
+
+```text
+Student Backlogs > Allowed Backlogs
+        ↓
+Application rejected
+```
+
+#### Department Validation
+
+The student's department is checked against the eligible department specified for the Job.
 
 ---
 
-# Interview Questions and Answers
+## 4. Queueable Apex
 
-### What is Asynchronous Apex?
+The project uses Queueable Apex for asynchronous processing.
 
-Asynchronous Apex executes code in the background without making users wait.
+### `PlacementNotificationJob`
 
-### When should processing remain synchronous?
+Used for placement-related notification processing.
 
-When immediate validation or an immediate response is required.
+### `ExternalPlacementSyncJob`
 
-### Why use Queueable Apex?
+Used for external placement synchronization processing.
 
-- Structured background processing
-- Supports Queueable Chaining
-- Better monitoring and flexibility than Future Methods
+### `OfferPostProcessingJob`
 
-### When should Batch Apex be used?
+Executed when an Application status changes to **Selected**.
 
-When processing very large datasets.
+The job performs post-processing asynchronously instead of doing additional processing directly inside the trigger transaction.
 
-### Methods in Batch Apex
+### Verification
 
-- start()
-- execute()
-- finish()
+The jobs were successfully executed and appeared as:
 
-### What is Scheduled Apex?
-
-Scheduled Apex executes jobs automatically at a specified time.
-
-### Can Scheduled Apex and Batch Apex work together?
-
-Yes.
-
-Scheduled Apex can initiate a Batch Apex job.
-
-### Does Asynchronous Apex remove Governor Limits?
-
-No.
-
-Governor Limits still apply.
-
-### Why should Batch Apex be bulkified?
-
-To process records efficiently while remaining within Governor Limits.
-
-### What happens if an asynchronous job fails?
-
-The failure can be investigated using Apex Jobs and Debug Logs.
-
-### What is Queueable Chaining?
-
-Queueable Chaining allows one Queueable job to enqueue another Queueable job after successful completion.
-
-### Before moving work to asynchronous processing, what should be considered?
-
-- Business requirement
-- Processing time
-- Failure handling
-- Monitoring
-- Duplicate execution
+```text
+PlacementNotificationJob     → Completed
+ExternalPlacementSyncJob     → Completed
+OfferPostProcessingJob       → Completed
+```
 
 ---
 
-# Sprint Retrospective
+## 5. Batch Apex
 
-## Hardest Concept
+### `PlacementCategoryBatch`
 
-Queueable Chaining because it requires understanding execution order.
+The Batch Apex class processes placement records in batches.
 
-## Most Important Learning
+It is useful when processing a larger number of records while respecting Salesforce governor limits.
 
-Knowing **when** to use Queueable Apex is more important than simply knowing how to write it.
+### Execution Result
 
-## Governor Limits
+The batch job was successfully executed:
 
-Governor Limits continue to apply in asynchronous processing.
-
-## New Challenges in Background Processing
-
-- Monitoring
-- Job failures
-- Duplicate execution
-- Execution order
-- Retry handling
-
-## Activities That Can Move to Background Processing
-
-- External System Synchronization
-- Notification Processing
-- Analytics Processing
+```text
+Status: Completed
+Processed: 1
+Errors: 0
+```
 
 ---
 
-# Conclusion
+## 6. Scheduled Apex
 
-In this sprint, asynchronous processing was implemented using Queueable Apex, Queueable Chaining, Batch Apex, and Scheduled Apex. Different execution models were selected based on business requirements, and the execution was successfully verified using Salesforce monitoring tools. The sprint demonstrated how asynchronous processing improves scalability, maintainability, and overall application performance.
+### `PlacementCategoryScheduler`
+
+The scheduler is responsible for running the placement-category batch process on a scheduled basis.
+
+The scheduled job created for the project is:
+
+```text
+Placement Category Daily Job
+```
+
+The test scheduled job was removed after verification.
+
+### Current Scheduled Job
+
+```text
+Placement Category Daily Job
+Type: Scheduled Apex
+Status: Scheduled
+```
 
 ---
 
+## 🔄 Automation Flow
+
+```text
+Application Created
+        |
+        v
+ApplicationTrigger
+        |
+        v
+ApplicationTriggerHandler
+        |
+        v
+ApplicationService
+        |
+        +----> CGPA Validation
+        |
+        +----> Backlog Validation
+        |
+        +----> Department Validation
+        |
+        v
+Application Updated
+        |
+        +----> Placement Notification
+        |
+        +----> External Sync
+        |
+        +----> Selected Status
+                    |
+                    v
+          OfferPostProcessingJob
+```
+
+### Scheduled Processing
+
+```text
+PlacementCategoryScheduler
+        |
+        v
+PlacementCategoryBatch
+        |
+        v
+Placement Category Processing
+```
+
 ---
 
-# Submission Details
+## 🛡️ Bulkification
 
-- **Name:** Mounisha Savaram
-- **Topic:** Engineering Sprint 8 – Designing Asynchronous Workflows That Remain Reliable
-- **Sprint:** Engineering Sprint 8
-- **Submitted On:** 06-Aug-2026
+The Apex code follows bulk-processing practices.
+
+Instead of performing SOQL queries inside loops:
+
+* Student IDs are collected into a `Set<Id>`.
+* Job IDs are collected into a `Set<Id>`.
+* Students are queried once.
+* Jobs are queried once.
+* Maps are used to access records efficiently.
+
+Example:
+
+```apex
+Set<Id> studentIds = new Set<Id>();
+Set<Id> jobIds = new Set<Id>();
+```
+
+This approach helps prevent Salesforce governor-limit errors such as:
+
+```text
+Too many SOQL queries: 101
+```
+
+---
+
+## 📊 Asynchronous Apex Verification
+
+The following jobs were verified through **Setup → Apex Jobs**.
+
+| Apex Job                     | Type           | Result    |
+| ---------------------------- | -------------- | --------- |
+| `PlacementNotificationJob`   | Queueable      | Completed |
+| `ExternalPlacementSyncJob`   | Queueable      | Completed |
+| `OfferPostProcessingJob`     | Queueable      | Completed |
+| `PlacementCategoryBatch`     | Batch Apex     | Completed |
+| `PlacementCategoryScheduler` | Scheduled Apex | Scheduled |
+
+---
+
+## 🧪 Testing Performed
+
+The following functionality was tested:
+
+* Application validation
+* CGPA eligibility validation
+* Backlog eligibility validation
+* Department eligibility validation
+* Application update processing
+* Placement notification processing
+* External placement synchronization
+* Offer post-processing
+* Batch Apex execution
+* Scheduled Apex execution
+* Async Apex job monitoring
+
+---
+
+## 📁 Apex Components
+
+```text
+force-app/
+└── main/
+    └── default/
+        ├── classes/
+        │   ├── ApplicationService.cls
+        │   ├── ApplicationTriggerHandler.cls
+        │   ├── PlacementNotificationJob.cls
+        │   ├── ExternalPlacementSyncJob.cls
+        │   ├── OfferPostProcessingJob.cls
+        │   ├── PlacementCategoryBatch.cls
+        │   └── PlacementCategoryScheduler.cls
+        │
+        └── triggers/
+            └── ApplicationTrigger.trigger
+```
+
+---
+
+## 🎯 Key Salesforce Concepts Used
+
+* Apex Classes
+* Apex Triggers
+* Trigger Handler Pattern
+* Service Layer Pattern
+* SOQL
+* Collections
+* Maps and Sets
+* Bulkification
+* Governor Limits
+* Queueable Apex
+* Batch Apex
+* Scheduled Apex
+* Asynchronous Processing
+* `System.enqueueJob()`
+* `Database.executeBatch()`
+* `System.schedule()`
+* Debug Logs
+* Apex Jobs Monitoring
+
+---
+
+## ✅ Final Status
+
+The advanced Apex automation was successfully implemented and tested.
+
+### Completed
+
+* ✅ Application validation
+* ✅ Trigger handler architecture
+* ✅ Queueable Apex
+* ✅ Offer post-processing
+* ✅ External placement synchronization
+* ✅ Placement notifications
+* ✅ Batch Apex
+* ✅ Scheduled Apex
+* ✅ Async Apex verification
+* ✅ Daily scheduled job
+* ✅ Test scheduled job removed
+
+---
+
+## 👩‍💻 Author
+
+**Mounisha Rathnavalli Savaram**
+
+**Salesforce Developer Training Project**
