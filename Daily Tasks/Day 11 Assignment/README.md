@@ -1,669 +1,480 @@
-Sprint 11 – Crossing the Salesforce Boundary
+````markdown
+# Day 11 - External Recruitment Integration
 
-Overview
+## Overview
 
-This sprint extends the Placement Management System beyond Salesforce by integrating it with an external recruitment platform.
+Day 11 focuses on integrating the Salesforce Placement Management
+System with an external recruitment platform.
 
-The integration allows Salesforce to communicate with an external system through REST APIs while keeping authentication, error handling, retries, and data synchronization reliable and secure.
-
-«A good Salesforce application does not live in isolation. It knows what belongs inside the platform, what belongs outside it, and how the two should communicate safely.»
-
-Business Problem
-
-The Placement Management System currently manages students, jobs, applications, interviews, and offers inside Salesforce.
-
-However, recruiting companies may use their own recruitment platforms.
-
-The requirement is:
-
-- When a student is selected, Salesforce should automatically send the candidate information to the external recruitment system.
-- When the external company updates information such as interview results, Salesforce should be able to receive that information.
-
-This creates the integration:
-
-Salesforce ↔ External Recruitment System
-
-APIs provide the agreed communication contract between the two systems.
+The goal is to allow a selected student application to be sent from
+Salesforce to an external recruitment API and to track the result of
+that integration inside Salesforce.
 
 ---
 
-Objectives
+## Business Problem
 
-This sprint covers:
+The Placement Office wants Salesforce to send selected candidates to
+the company's recruitment platform.
 
-- APIs and API contracts
-- REST APIs
-- HTTP methods
-- Request and response structures
-- JSON
-- Salesforce HTTP callouts
-- Queueable Apex for asynchronous callouts
-- Named Credentials
-- Authentication and authorisation
-- Auth Providers
-- Salesforce Connect and External Objects
-- Point-to-point and middleware integration
-- Synchronous and asynchronous integration
-- Error handling
-- Retry mechanisms
-- Idempotency
-- Integration status tracking
+The integration allows Salesforce to communicate with an external
+system using an HTTP REST callout.
 
 ---
 
-REST API
+## Integration Flow
 
-REST APIs commonly use HTTP methods to express the intended operation.
-
-Method| Typical Meaning
-GET| Retrieve data
-POST| Create/process something
-PUT| Replace/update a resource
-PATCH| Partially update a resource
-DELETE| Remove a resource
-
-For example:
-
-GET /jobs
-GET /jobs/123
-POST /applications
-PATCH /applications/123
-
-The HTTP method communicates what operation the caller intends to perform.
-
----
-
-Request and Response
-
-An API request can contain:
-
-- URL
-- HTTP method
-- Headers
-- Authentication information
-- Optional body
-
-The response can contain:
-
-- Status code
-- Headers
-- Optional body
-
-Common HTTP Status Codes
-
-Status| Meaning
-200| Successful request
-201| Resource successfully created
-204| Successful request with no response body
-400| Bad request
-401| Authentication required/failed
-403| Forbidden
-404| Resource not found
-500| Server-side error
-
-An integration must be designed to handle failures rather than assuming every request succeeds.
-
----
-
-JSON
-
-JSON is commonly used to exchange information between APIs.
-
-Example:
-
-{
-  "studentId": "STU10045",
-  "name": "Ananya",
-  "email": "ananya@example.com",
-  "cgpa": 8.4,
-  "branch": "CSE"
-}
-
-JSON contains:
-
-- Keys
-- Values
-- Objects
-- Arrays
-
-The application should understand the data structure before implementing the integration logic.
-
----
-
-Integration Architecture
-
-The proposed candidate synchronization flow is:
-
-Application Status
-        ↓
-     Selected
-        ↓
-     Queueable
-        ↓
-   Build Request
-        ↓
- Named Credential
-        ↓
-    REST API
-        ↓
- Process Response
-
-Queueable Apex is used because sending information to an external system can be secondary to the immediate Salesforce business transaction.
-
----
-
-Apex HTTP Callout
-
-Salesforce can communicate with external APIs using HTTP callouts.
-
-Conceptual flow:
-
-HttpRequest
-     ↓
-Configure Request
-     ↓
-Http
-     ↓
-send()
-     ↓
-HttpResponse
-
-Example:
-
-HttpRequest request = new HttpRequest();
-
-request.setEndpoint(
-    'callout:Recruitment_API/candidates'
-);
-
-request.setMethod('POST');
-
-request.setHeader(
-    'Content-Type',
-    'application/json'
-);
-
-request.setBody(
-    JSON.serialize(candidate)
-);
-
-Http http = new Http();
-
-HttpResponse response =
-    http.send(request);
-
-The important components are:
-
-- HttpRequest – represents what Salesforce wants to send.
-- Endpoint – identifies where the request goes.
-- Method – specifies the requested operation.
-- Headers – provide additional information.
-- Body – contains the data being sent.
-- Http – performs the request.
-- HttpResponse – contains the external system's response.
-
----
-
-Named Credentials
-
-Credentials should never be hard-coded inside Apex.
-
-Hard-coding credentials can cause:
-
-- Secrets to leak into Git
-- Exposure during code reviews
-- Accidental copying
-- Difficult credential rotation
-- Security risks
-
-Instead, Salesforce provides Named Credentials.
-
-Conceptually:
-
-Apex
- ↓
-Named Credential
- ↓
-Authentication
- ↓
-External API
-
-Named Credentials provide managed configuration for an external endpoint and its authentication setup.
-
----
-
-Authentication vs Authorisation
-
-Authentication
-
-Answers:
-
-«Who are you?»
-
-Authorisation
-
-Answers:
-
-«What are you allowed to do?»
-
-For example:
-
-Authentication
-→ Identify the user/system
-
-Authorisation
-→ Determine what that identity is permitted to access
-
-A "401" response generally requires investigation of authentication, while a "403" response may indicate insufficient permissions for an authenticated identity.
-
----
-
-Auth Providers
-
-An Auth Provider can help Salesforce handle authentication with supported external identity providers.
-
-A simplified architecture is:
-
-External Identity Provider
-          ↓
-     Auth Provider
-          ↓
-Salesforce Authentication Configuration
-          ↓
-    Named Credential
-          ↓
-      Apex Callout
-          ↓
-     External API
-
-The exact configuration depends on the external provider and authentication protocol.
-
----
-
-Candidate Data
-
-When a student is selected, the following information can be sent to the external recruitment platform:
-
-- Student ID
-- Name
-- Email
-- Branch
-- CGPA
-- Job ID
-- Company
-- Role
-- Selection Date
-
-The API contract should define the endpoint, request body, expected response, and possible error responses.
-
----
-
-API Contract
-
-Example contract:
-
-Endpoint:
-POST /candidates
-
-Request:
-Candidate information in JSON format
-
-Possible Responses:
-200 / 201 → Success
-400       → Bad Request
-401       → Authentication Failure
-403       → Forbidden
-500       → Server Error
-
-The API contract should be documented before implementation.
-
----
-
-Integration Status
-
-The system should track the state of external synchronization.
-
-Example:
-
-Pending
-   ↓
-Queueable
-   ↓
-Success → Sent
-
-Failure
-   ↓
-Retry Required
-
-Useful fields include:
-
-- "Integration_Status__c"
-- External Reference
-- Last Attempt
-- Error Message
-
-This allows administrators to identify what happened during synchronization.
-
----
-
-Error Handling and Retry
-
-The external system may be temporarily unavailable.
-
-For example:
-
-Salesforce
-    ↓
-External API
-    X
-Unavailable
-
-The student's selection should not necessarily fail just because the external synchronization failed.
-
-A temporary "500 Internal Server Error" may require a retry instead of permanently marking the candidate as failed.
-
-However, retries can create duplicate records. Therefore, the integration must consider idempotency.
-
----
-
-Idempotency
-
-Idempotency asks:
-
-«If the same request is processed twice, will it create duplicate data?»
-
-Possible strategies include:
-
-- External Reference ID
-- Salesforce Application ID
-- Idempotency Key
-- Existing-record lookup
-- Synchronization status
-
-The integration should identify the unique business transaction before implementing retries.
-
----
-
-Salesforce Connect and External Objects
-
-Sometimes Salesforce does not need to copy external data into Salesforce.
-
-Instead:
-
-External System
-      ↓
-External Object
-      ↓
-Salesforce UI
-
-The data remains primarily in the external system.
-
-This can be useful when Salesforce users need to view external information without storing all of it inside Salesforce.
-
-Copy Data vs Access Data
-
-Copy data into Salesforce when Salesforce needs to own, manipulate, automate, or report on the data.
-
-Use External Objects when the requirement is primarily to access external data without copying everything.
-
-The decision depends on:
-
-- Data ownership
-- Data volume
-- Latency
-- Reporting
-- Security
-- Integration requirements
-- Business criticality
-
----
-
-Integration Patterns
-
-Point-to-Point
-
-Salesforce
-     ↕
-External System
-
-This is simple and can be appropriate when there is only one external system.
-
-Middleware
-
-Salesforce
-     ↕
-Middleware
-     ↕
-External Systems
-
-Middleware can provide:
-
-- Transformation
-- Routing
-- Orchestration
-- Monitoring
-- Retries
-- Protocol conversion
-
-As the number of external systems increases, middleware can help manage integration complexity.
-
----
-
-Synchronous vs Asynchronous
-
-Synchronous
-
-Salesforce
-    ↓
-External API
-    ↓
-Response
-    ↓
-Salesforce
-
-Use when the user genuinely needs the response immediately.
-
-Example:
-
-«Verify an external certification number.»
-
-Asynchronous
-
-Salesforce
-    ↓
-Queueable
-    ↓
-External API
-
-Use when the external operation does not need to block the user.
-
-Example:
-
-«Send selected student information to a company's recruitment system.»
-
-For large scheduled synchronizations, concepts such as Scheduled Apex, Batch Apex, integration, error handling, and retry strategies should be considered.
-
----
-
-Security Principles
-
-This sprint emphasizes:
-
-1. Never hard-code credentials.
-2. Use Named Credentials.
-3. Separate configuration from business code.
-4. Understand authentication and authorisation.
-5. Handle authentication failures.
-6. Protect sensitive integration information.
-
----
-
-Project Structure
-
-Recommended repository structure:
-
-Sprint-11-Integration
-│
-├── README.md
-│
-├── architecture/
-│   ├── integration-flow.png
-│   ├── sequence-diagram.png
-│   └── integration-pattern.png
-│
-├── force-app/
-│
-├── api-contract/
-│   └── candidate-api.md
-│
-├── screenshots/
-│
-└── learning-notes/
-    └── sprint-11.md
-
-The README should document the business problem, external system, data flow, authentication, error handling, retry strategy, idempotency, and integration pattern.
-
----
-
-Mini Project – External Recruitment Gateway
-
-The project should:
-
-1. Send Selected Candidates
-
+```text
 Application
-    ↓
-Queueable
-    ↓
-External API
-
-2. Track Integration Status
-
-Recommended fields:
-
-- Integration Status
-- External Candidate ID
-- Last Integration Attempt
-- Integration Error
-
-3. Use Named Credentials
-
-No hard-coded secrets.
-
-4. Handle Responses
-
-At minimum:
-
-- Success
-- 400
-- 401
-- 403
-- 500
-- Unexpected Error
-
-5. Handle Retry
-
-Document what happens when the external system is temporarily unavailable.
-
-6. Prevent Duplicates
-
-Document what uniquely identifies a candidate submission.
-
-7. Document the API Contract
-
-Include:
-
-- Endpoint
-- Method
-- Request JSON
-- Response JSON
-- Authentication approach
-- Error handling
-- Retry strategy
-- Idempotency strategy
-
-If a mock API is used, clearly document that it is a mock API.
+     |
+     | Send to Recruitment
+     v
+Apex Controller
+     |
+     v
+Named Credential
+     |
+     v
+External Recruitment API
+     |
+     v
+HTTP Response
+     |
+     v
+Update Application Integration Status
+````
 
 ---
 
-Key Engineering Principles
+## Salesforce Components
 
-API = Communication Contract
+### Application Object
 
-Systems communicate through agreed contracts instead of directly accessing each other's databases.
+The following integration tracking fields were added to
+`Application__c`:
 
-Configuration ≠ Business Code
+* `Integration_Status__c`
+* `External_Candidate_Id__c`
+* `Last_Integration_Attempt__c`
+* `Integration_Error__c`
 
-Endpoints and authentication configuration should be separated from Apex logic.
+These fields allow Salesforce users to understand the current state
+of an external synchronization.
 
-Business Commitment ≠ External Communication
+---
 
-The Salesforce transaction should establish the essential business truth first. External synchronization can happen afterward when appropriate.
+## Integration Status
 
-Design for Failure
+The `Integration_Status__c` field is a restricted picklist with the
+following values:
+
+* Not Sent
+* Queued
+* Success
+* Failed
+* Retry
+
+---
+
+## Apex Controller
+
+The main Apex class is:
+
+```text
+RecruitmentIntegrationController.cls
+```
+
+The controller:
+
+1. Receives the Application Id.
+2. Retrieves the Application record.
+3. Builds the request payload.
+4. Creates an HTTP request.
+5. Sends a POST request to the external endpoint.
+6. Processes the HTTP response.
+7. Updates integration tracking fields.
+8. Returns the integration result.
+
+---
+
+## HTTP Callout
+
+The integration uses an HTTP `POST` request.
+
+Example request structure:
+
+```json
+{
+  "applicationId": "Salesforce Application Id",
+  "applicationNumber": "APPID2608",
+  "status": "Selected"
+}
+```
+
+The request uses:
+
+```text
+Content-Type: application/json
+```
+
+---
+
+## Named Credential
+
+The Apex code does not hard-code the external endpoint.
+
+The callout uses:
+
+```text
+callout:Recruitment_Gateway
+```
+
+The Named Credential is:
+
+```text
+Recruitment Gateway
+```
+
+API Name:
+
+```text
+Recruitment_Gateway
+```
+
+The Named Credential contains the external endpoint configuration.
+
+---
+
+## External Credential
+
+The External Credential created for the integration is:
+
+```text
+Recruitment Gateway Credential
+```
+
+API Name:
+
+```text
+Recruitment_Gateway_Credential
+```
+
+Authentication configuration is separated from the Apex business logic.
+
+---
+
+## Permission Set
+
+A permission set was created:
+
+```text
+Recruitment Integration Access
+```
+
+The permission set provides the required access for the integration
+objects and external credential functionality.
+
+---
+
+## Send to Recruitment Action
+
+A custom action was configured on the Application object.
+
+The action allows a user to initiate the recruitment integration from
+an Application record.
+
+Example:
+
+```text
+Application
+    |
+    v
+Send to Recruitment
+    |
+    v
+RecruitmentIntegrationController
+    |
+    v
+External API
+```
+
+---
+
+## Success Handling
+
+When the external API returns a successful response, Salesforce updates:
+
+```text
+Integration Status = Success
+Integration Error = blank
+Last Integration Attempt = current date/time
+```
+
+The external candidate reference is also stored in:
+
+```text
+External Candidate Id
+```
+
+---
+
+## Failure Handling
+
+When the external API returns an unsuccessful response, Salesforce
+records the failure.
+
+Example:
+
+```text
+Integration Status = Failed
+Integration Error = HTTP error information
+Last Integration Attempt = current date/time
+```
+
+This allows administrators to identify integration failures.
+
+---
+
+## Error Handling
+
+The integration handles exceptions using Apex exception handling.
+
+If an exception occurs, the integration records:
+
+* Failure status
+* Error message
+* Last integration attempt
+
+The user receives an integration failure notification.
+
+---
+
+## Testing
+
+The integration was tested from an Application record.
+
+Test Application:
+
+```text
+Application Number: APPID2608
+```
+
+The **Send to Recruitment** action was executed successfully.
+
+The integration successfully reached the configured HTTP endpoint and
+returned a successful result.
+
+---
+
+## Development/Test Endpoint
+
+For development and testing, a mock HTTP endpoint was used.
+
+The current endpoint is intended for testing and is **not a production
+Recruitment API**.
+
+A real recruitment API endpoint should replace the test endpoint before
+production deployment.
+
+---
+
+## Security
+
+Credentials are not stored directly in Apex.
+
+The integration uses Salesforce:
+
+* Named Credentials
+* External Credentials
+* Permission Sets
+
+This separates integration configuration and authentication from
+business logic.
+
+---
+
+## Integration Tracking
+
+Salesforce maintains integration state using the following fields:
+
+| Field                    | Purpose                                  |
+| ------------------------ | ---------------------------------------- |
+| Integration Status       | Current integration state                |
+| External Candidate Id    | External candidate reference             |
+| Last Integration Attempt | Date/time of latest attempt              |
+| Integration Error        | Error information when integration fails |
+
+---
+
+## Error Scenarios
+
+The integration should consider common external API failures such as:
+
+```text
+400 - Bad Request
+401 - Authentication Failure
+403 - Authorization Failure
+500 - Server Error
+Timeout
+Connection Failure
+```
+
+The Salesforce integration layer should record useful error
+information so administrators can identify and investigate failures.
+
+---
+
+## Future Improvements
+
+The current implementation can be extended with:
+
+### Queueable Apex
+
+Move the external callout into asynchronous processing so that the
+Salesforce user does not need to wait for the external system.
+
+```text
+Selected
+   |
+   v
+Queueable Apex
+   |
+   v
+HTTP Callout
+   |
+   v
+External Recruitment API
+```
+
+### Retry Processing
+
+Temporary external failures can be retried.
+
+```text
+Failure
+   |
+   v
+Retry Required
+   |
+   v
+Queueable
+   |
+   v
+External API
+```
+
+### Idempotency
+
+The integration should prevent duplicate candidate creation if the
+same Application is submitted more than once.
+
+Possible identifiers include:
+
+* Salesforce Application Id
+* External Reference Id
+* Idempotency Key
+
+### Monitoring
+
+Failed integrations can be monitored using Salesforce reports,
+list views, or administrative dashboards.
+
+---
+
+## Integration Architecture
+
+The broader integration architecture is:
+
+```text
+Salesforce
+    |
+    | Application Selected
+    v
+Integration Layer
+    |
+    | HTTP POST
+    v
+External Recruitment Platform
+    |
+    | HTTP Response
+    v
+Integration Status
+```
+
+The architecture separates Salesforce business data from external
+system communication.
+
+---
+
+## Key Concepts Learned
+
+Day 11 covered:
+
+* REST APIs
+* HTTP methods
+* JSON request and response structures
+* Apex HTTP Callouts
+* `HttpRequest`
+* `Http`
+* `HttpResponse`
+* Named Credentials
+* External Credentials
+* Authentication
+* Authorization
+* Integration status tracking
+* Error handling
+* Retry thinking
+* Idempotency
+* Salesforce Connect and External Objects
+* Point-to-point integration
+* Middleware concepts
+* Synchronous vs asynchronous integration
+
+---
+
+## Engineering Lessons
+
+An integration is more than simply making an HTTP request.
 
 External systems can be:
 
-- Slow
-- Unavailable
-- Incorrectly configured
-- Overloaded
-- Changed unexpectedly
-- Authenticated differently
-- Returning unexpected data
+* Slow
+* Unavailable
+* Incorrectly configured
+* Temporarily overloaded
+* Authenticated differently
+* Returning unexpected data
 
-Therefore, integrations need timeouts, errors, authentication, retries, duplicate protection, monitoring, and contracts.
+Therefore, integration design must consider:
 
----
-
-Final Architecture
-
-Students
-   ↓
-Lightning Web Components
-   ↓
-Apex Services
-   ↓
-┌───────────────────────┐
-│ Salesforce Async Apex │
-│ Queueable / Batch     │
-└───────────┬───────────┘
-            ↓
-       External APIs
-            ↓
-     External Systems
-
-The overall goal is not simply to make one API request work. The integration should allow two independent systems to continue working correctly even when one system fails.
+* Timeouts
+* Errors
+* Authentication
+* Retries
+* Duplicate requests
+* Monitoring
+* Data ownership
+* API contracts
 
 ---
 
-Learning Outcomes
+## Day 11 Outcome
 
-After completing this sprint, you should be able to:
+The Salesforce Placement Management System successfully communicates
+with an external HTTP endpoint.
 
-- Explain APIs as contracts between systems.
-- Explain REST and HTTP methods.
-- Understand request and response structures.
-- Read JSON.
-- Understand Salesforce HTTP callouts.
-- Explain why callouts may use asynchronous processing.
-- Explain Named Credentials.
-- Distinguish authentication from authorisation.
-- Explain Auth Providers.
-- Explain Salesforce Connect and External Objects.
-- Compare point-to-point and middleware integration.
-- Choose synchronous or asynchronous integration based on requirements.
-- Handle failures and retries.
-- Explain idempotency.
-- Track integration status.
-- Connect Triggers, Services, Queueable Apex, and external APIs.
-- Document an API contract.
-- Defend an integration architecture.
+The Application record stores the integration state and error
+information, allowing Salesforce users and administrators to understand
+the result of the external synchronization.
 
-Conclusion
+The integration can be extended further with Queueable Apex, retry
+processing, idempotency, monitoring, and a production recruitment API.
 
-Sprint 11 takes the Placement Management System from a Salesforce-only application to an enterprise-style application capable of communicating with external systems.
+---
 
-The key lesson is:
+## Status
 
-«An integration is successful not when one API call works, but when two independent systems can continue working correctly even when the other system does not.»
+**Day 11 - External Recruitment Integration: COMPLETE**
+
+```
+```
